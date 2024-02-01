@@ -1,0 +1,737 @@
+'================================================================
+' MRJ TECHNICAL PUBLICATION XML TOOL
+'
+' THIS IS THE DATA DISPATCH NOTE (DDN) XML FILE GENERATING TOOL FOR MRJ TECHNICAL PUBLICATION
+'
+' //////// USAGE //////////
+' (1) TO GENERATE DDN XML FILE, SPECIFY THE FOLDER THAT DATA MODULES EXITS.
+' (2) YOU CAN SPECIFY THE FOLDER BY DRAG AND DROP ONTO THIS FILE.
+' (3) YOU CAN EASILY GIVE THE ISSUE DATE, SEQUENCIAL NUMBER OF DIRIVED DDN.
+' (4) DDN XML FILE WILL BE SAVED TO SAME FOLDER WHERE THE DATA MODULES EXISTS.
+'
+' //////// APPLICABLE BREX VERSION //////////
+' MBR-A-00-00-0000-00A-022A-D
+' ISSUE NUMBER: 000
+' 
+' //////// Default Business Rules Exchange Data Module //////////
+' S1000D-A-04-10-0301-00A-022A-D
+'
+'
+'*******************************************************
+
+
+
+
+
+'*******************************************************
+' YOU CAN MODIFY SENDER IDENTIFICATION DEFAULT VALUE (CONSTANT)
+' PLEASE CHANGE TO YOUR COMPANY CAGE CODE IF YOU WANT TO CHANGE DEFAULT SENDER VALUE
+'*******************************************************
+Const cDEFAULTSenderIdent = "77445"
+Const cDEFAULTSenderEnterpriseName = "Pratt &amp; Whitney"
+Const cDEFAULTSenderCity = "East Hartford"
+Const cDEFAULTSenderCountry = "USA"
+'*******************************************************
+
+
+
+
+
+'*******************************************************
+' PLEASE DO NOT CHANGE FOLLOWING VALUE AND PROGRAM PART
+'*******************************************************
+Const cDEFAULTMICode = "MRJ"
+Const cDEFAULTReceiverIdent = "SJZ51"
+Const cDEFAULTReceiverEnterpriseName = "Mitsubishi"
+Const cDEFAULTReceiverCity = "Nagoya"
+Const cDEFAULTReceiverCountry = "Japan"
+
+Const cIndentEIGHT = "        "
+
+Const cAppName = "MRJ TECHNICAL PUBLICATION XML TOOL Rev. 2012 Apr"
+
+Const cUsage01 = "TO GENERATE DDN XML FILE, SPECIFY THE FOLDER THAT DATA MODULES EXITS."
+Const cUsage02 =   "YOU CAN ALSO SPECIFY THE FOLDER BY DRAG AND DROP ONTO THIS FILE."
+Const cUsage03 =   "YOU CAN EASILY GIVE THE ISSUE DATE, SEQUENCIAL NUMBER OF DIRIVED DDN."
+Const cUsage04 =   "DDN XML FILE WILL BE SAVED TO SAME FOLDER WHERE THE DATA MODULES EXISTS."
+
+
+'*******************************************************
+' CALL MAIN PROCUDERE
+'*******************************************************
+Main()
+
+'*******************************************************
+' GenerateDDNXMLFile
+'*******************************************************
+Sub GenerateDDNXMLFile(sFolder)
+Dim sMICode
+Dim sSenderIdent
+Dim sReceiverIdent
+Dim sSeqNumber
+Dim sYearIssue
+Dim sElmtIssueDate
+Dim sDay
+Dim sMonth
+
+Dim sDDNXMLTEXT
+Dim sDDNFileName
+Dim sDDNFilePath
+
+
+sMICode = GetModelIdentCode
+sSenderIdent = GetSenderIdent
+sReceiverIdent = GetReceiverIdent
+sSeqNumber = GetSeqNumber
+
+	Dim sIssueDate
+	Do Until Len(sIssueDate)=10 AND ISDATE(sIssueDate)
+	sIssueDate = InputBox("Please confirm/input issueDate for the derived DDN.[YYYY/MM/DD]", cAppName, Date)
+	Loop
+
+sYearIssue = Left(sIssueDate, 4)
+sDay = Mid(sIssueDate, 6, 2)
+sMonth = Mid(sIssueDate, 9, 2)
+
+Msgbox "issueDate of the derived DDN has been set to """ & sIssueDate & " "".", vbInformation , cAppName
+
+'DDN File
+sDDNFileName = GetDDNFileName(sMICode, sReceiverIdent, sSenderIdent, sSeqNumber, sYearIssue)
+sDDNFilePath = sFolder & "\" & sDDNFileName
+
+Dim ret
+Dim FS
+Set FS = CreateObject("Scripting.FileSystemObject")
+ret = FS.FileExists( sDDNFilePath )
+Set FS = Nothing
+
+If ret=true then
+	Msgbox "DDN XML FILE IS ALREADY EXISTS IN THIS FOLDER!" & VbCrLf & VBCrLf & sDDNFilePath, vbExclamation, cAppName
+	Exit Sub
+End If
+
+
+sElmtDDNCodeTxt = GetElementDDNCode (sMICode, sReceiverIdent, sSenderIdent, sSeqNumber, sYearIssue)
+sElmtIssueDate = GetElementIssueDate (sDay, sMonth, sYearIssue)
+GenerateDDN sFolder, sDDNFileName, sDDNFilePath, sElmtDDNCodeTxt, sElmtIssueDate, sReceiverIdent,sSenderIdent
+
+Msgbox "DDN XML FILE WAS SAVED TO THIS FOLDER." & VbCrLf & VBCrLf & sDDNFilePath, vbInformation, cAppName
+
+End Sub
+
+
+'*******************************************************
+' GenerateDDN
+'*******************************************************
+Function GenerateDDN(sFolder, sDDNFileName, sDDNFilePath, sElmtDDNCodeTxt, sElmtIssueDate, sReceiverIdent,sSenderIdent)
+GenerateDDN = False
+Dim sANSIPath
+sANSIPath = replace(sDDNFilePath,".xml","_ansi.xml")
+
+Dim fso, MyFile
+Set fso = CreateObject("Scripting.FileSystemObject")
+Set MyFile = fso.CreateTextFile(sANSIPath, True)
+
+MyFile.WriteLine("<?xml version=""1.0"" encoding=""UTF-8""?>")
+MyFile.WriteLine("<!DOCTYPE ddn [")
+MyFile.WriteLine("<!ENTITY % ISOEntities PUBLIC 'ISO 8879-1986//ENTITIES ISO Character Entities 20030531//EN//XML' 'http://www.s1000d.org/S1000D_4-0-1/ent/xml/ISOEntities'>")
+MyFile.WriteLine("%ISOEntities;]>")
+MyFile.WriteLine("<ddn xmlns:dc=""http://www.purl.org/dc/elements/1.1/"" xmlns:rdf=""http://www.w3.org/1999/02/22-rdf-syntax-ns#"" xmlns:xlink=""http://www.w3.org/1999/xlink"" xmlns:xsi=""http://www.w3.org/2001/XMLSchema-instance"" xsi:noNamespaceSchemaLocation=""http://www.s1000d.org/S1000D_4-0-1/xml_schema_flat/ddn.xsd"">")
+MyFile.WriteLine("  <identAndStatusSection>")
+MyFile.WriteLine("    <ddnAddress>")
+MyFile.WriteLine("      <ddnIdent>")
+MyFile.WriteLine(sElmtDDNCodeTxt)
+MyFile.WriteLine("      </ddnIdent>")
+MyFile.WriteLine("      <ddnAddressItems>")
+MyFile.WriteLine(sElmtIssueDate)
+
+MyFile.WriteLine("        <dispatchTo>")
+MyFile.WriteLine("          <dispatchAddress>")
+MyFile.WriteLine("            <enterprise>")
+
+	Dim sInput
+	sInput = GetEnterpriseName(sReceiverIdent)
+	Do Until sInput<>""
+	sInput = InputBox("Please confirm/input Receiver's enterpriseName.", cAppName, sInput)
+	Loop
+MyFile.WriteLine("              <enterpriseName>" & sInput & "</enterpriseName>")
+
+MyFile.WriteLine("            </enterprise>")
+MyFile.WriteLine("            <address>")
+
+	sInput = GetCity(sReceiverIdent)
+	Do Until sInput<>""
+	sInput = InputBox("Please confirm/input Receiver's city.", cAppName, sInput)
+	Loop
+MyFile.WriteLine("              <city>" & sInput & "</city>")
+
+	sInput = GetCountry(sReceiverIdent)
+	Do Until sInput<>""
+	sInput = InputBox("Please confirm/input Receiver's country.", cAppName, sInput)
+	Loop
+MyFile.WriteLine("              <country>" & sInput & "</country>")
+
+MyFile.WriteLine("            </address>")
+MyFile.WriteLine("          </dispatchAddress>")
+MyFile.WriteLine("        </dispatchTo>")
+
+MyFile.WriteLine("        <dispatchFrom>")
+MyFile.WriteLine("          <dispatchAddress>")
+MyFile.WriteLine("            <enterprise>")
+
+	sInput = GetEnterpriseName(sSenderIdent)
+	Do Until sInput<>""
+	sInput = InputBox("Please confirm/input Sender's enterpriseName.", cAppName, sInput)
+	Loop
+MyFile.WriteLine("              <enterpriseName>" & sInput & "</enterpriseName>")
+MyFile.WriteLine("            </enterprise>")
+MyFile.WriteLine("            <address>")
+
+	sInput = GetCity(sSenderIdent)
+	Do Until sInput<>""
+	sInput = InputBox("Please confirm/input Sender's city.", cAppName, sInput)
+	Loop
+MyFile.WriteLine("              <city>" & sInput & "</city>")
+
+	sInput = GetCountry(sSenderIdent)
+	Do Until sInput<>""
+	sInput = InputBox("Please confirm/input Sender's country.", cAppName, sInput)
+	Loop
+MyFile.WriteLine("              <country>" & sInput & "</country>")
+MyFile.WriteLine("            </address>")
+MyFile.WriteLine("          </dispatchAddress>")
+MyFile.WriteLine("        </dispatchFrom>")
+
+MyFile.WriteLine("      </ddnAddressItems>")
+MyFile.WriteLine("    </ddnAddress>")
+MyFile.WriteLine("    <ddnStatus>")
+MyFile.WriteLine("      <security securityClassification=""01""/>")
+
+' INPUT Authorization ------------>
+	Dim sAuthorization
+	Do Until sAuthorization<>""
+	sAuthorization = InputBox("Please input <authorization> for the derived DDN.", cAppName)
+	Loop
+
+' COMFIRMATION
+Msgbox "<authorization> of the derived DDN has been set to """ & sAuthorization & " "".", vbInformation , cAppName
+MyFile.WriteLine("      <authorization>" & sAuthorization & "</authorization>    ")
+
+
+MyFile.WriteLine("    </ddnStatus>")
+MyFile.WriteLine("  </identAndStatusSection>")
+MyFile.WriteLine("  <ddnContent>")
+MyFile.WriteLine("    <deliveryList>")
+
+
+' Insert DeliveryListItem of DDN
+Dim sElmtDDNDispatchFileName
+Dim sElmtDDNEntCtrlNumber
+sElmtDDNDispatchFileName = GetElementDispatchFileName(sDDNFileName)
+sElmtDDNEntCtrlNumber = GetElementEntityControlNumber(sDDNFileName)
+MyFile.WriteLine("      <deliveryListItem>")
+MyFile.WriteLine(sElmtDDNDispatchFileName)
+MyFile.WriteLine(sElmtDDNEntCtrlNumber)
+MyFile.WriteLine("     </deliveryListItem>")
+
+' Insert DeliveryListItem from Folder
+
+	Dim TRGFolder
+	Dim FSObj
+
+
+ Set FSObj = CreateObject("Scripting.FileSystemObject")
+
+  Set TRGFolder = FSObj.GetFolder(sFolder)
+	Dim Files
+	Dim File
+	Dim arr()
+	Dim i
+	Dim sElmtDispatchFName
+	Dim sElmtEntCtrlNumber
+	Dim sElmtIssueInfo
+	Dim URNtype
+
+	Set Files = TRGFolder.Files
+	ReDim arr(Files.Count)
+
+	If Files.Count <> 0 Then
+		For Each File In Files
+			URNtype = GetUniformResourceName(File.Name)
+			If URNtype<>"DDN" and URNtype<>"OTH" then
+				MyFile.WriteLine("      <deliveryListItem>")
+				sElmtDispatchFName = GetElementDispatchFileName(File.Name)
+				sElmtEntCtrlNumber = GetElementEntityControlNumber(File.Name)
+				sElmtIssueInfo = GetElementIssueInfo(File.Name)
+				MyFile.WriteLine(sElmtDispatchFName)
+				MyFile.WriteLine(sElmtEntCtrlNumber)
+				MyFile.WriteLine(sElmtIssueInfo)
+				MyFile.WriteLine("     </deliveryListItem>")
+			End If
+		Next
+	End If
+
+MyFile.WriteLine("    </deliveryList>")
+MyFile.WriteLine("  </ddnContent>")
+MyFile.WriteLine("</ddn>")
+
+MyFile.Close
+'Set fso = Nothing
+
+
+'Save as UTF-8
+Set fr = New UTF8FileReader
+arrText = fr.ReadByLine(sANSIPath)
+
+Set fw = New UTF8FileWriter
+fw.WriteByLine arrText, sDDNFilePath
+If Err.Number <> 0 Then
+  ' Err
+End If
+
+'Delete ANSI XML File
+fso.DeleteFile sANSIPath
+Set fso = Nothing
+
+GenerateDDN = True
+End Function
+
+
+'*******************************************************
+' GetElementDispatchFileName
+'*******************************************************
+Function GetElementDispatchFileName(sFileName)
+	GetElementDispatchFileName = "        <dispatchFileName>" & sFileName & "</dispatchFileName>"
+End Function
+
+'*******************************************************
+' GetElementDispatchFileName
+'*******************************************************
+Function GetElementEntityControlNumber(sFileName)
+	Dim sEntCtrlNumber
+	sEntCtrlNumber = GetEntityControlNumber(sFileName)
+	GetElementEntityControlNumber = "        <entityControlNumber>" & sEntCtrlNumber & "</entityControlNumber>"
+End Function
+
+'*******************************************************
+' GetEntityControlNumber
+'*******************************************************
+Function GetEntityControlNumber(sFileName)
+	Dim sURN
+	sURN = GetUniformResourceName(sFileName)
+	Select Case sURN
+	Case "DDN"
+		GetEntityControlNumber = Mid(sFileName,5,26)
+		Exit Function
+	Case "PMC"
+		GetEntityControlNumber = Mid(sFileName,5,18)
+		Exit Function
+	Case "DMC"
+		GetEntityControlNumber = Mid(sFileName,5,25)
+		Exit Function
+	Case "ICN"
+		GetEntityControlNumber = Mid(sFileName,5,35)
+		Exit Function
+	Case Else
+'		GetEntityControlNumber ="01"
+	End Select
+End Function
+
+
+'*******************************************************
+' GetIssueInfoXMLTEXT
+'*******************************************************
+Function GetIssueInfoXMLTEXT(sFileName)
+	Dim sURN
+	sURN = GetUniformResourceName(sFileName)
+	GetIssueInfoXMLTEXT = cIndentEIGHT
+
+	Select Case sURN
+	Case "DMC","PMC"
+		GetIssueInfoXMLTEXT = GetIssueInfo(sFileName)
+		Exit Function
+	Case Else
+		'Indent Only
+	End Select
+End Function
+
+'*******************************************************
+' GetElementIssueInfo
+'*******************************************************
+Function GetElementIssueInfo(sFileName)
+Dim sInwork
+Dim sIssueNumber
+	sInwork = GetInWork(sFileName)
+	sIssueNumber = GetIssueNumber(sFileName)
+	GetElementIssueInfo = cIndentEIGHT & "<issueInfo inWork=""" & sInwork & """ issueNumber=""" & sIssueNumber & """/>"
+End Function
+
+'*******************************************************
+' GetInWork NUMBER
+'*******************************************************
+Function GetInWork(sFileName)
+	Dim sURN
+	sURN = GetUniformResourceName(sFileName)
+	Select Case sURN
+	Case "DMC"
+		GetInWork = Mid(sFileName,35,2)
+		Exit Function
+	Case "PMC"
+		GetInWork = Mid(sFileName,28,2)
+		Exit Function
+	Case "ICN"
+		GetInWork = Mid(sFileName,38,2)
+		Exit Function
+	Case Else
+'		GetInWork ="01"
+	End Select
+End Function
+
+'*******************************************************
+' GetIssueNumber
+'*******************************************************
+Function GetIssueNumber(sFileName)
+	Dim sURN
+	sURN = GetUniformResourceName(sFileName)
+	Select Case sURN
+	Case "DMC"
+		GetIssueNumber = Mid(sFileName,31,3)
+		Exit Function
+	Case "PMC"
+		GetIssueNumber = Mid(sFileName,24,3)
+		Exit Function
+	Case "ICN"
+		GetIssueNumber = Mid(sFileName,34,3)
+		Exit Function
+	Case Else
+'		GetIssueNumber ="001"
+	End Select
+End Function
+
+'*******************************************************
+' GetDDNFileName
+'*******************************************************
+Function GetDDNFileName(sMICode, sReceiverIdent, sSenderIdent, sSeqNum, sYear)
+	GetDDNFileName = "DDN-" & sMICode & "-" & sReceiverIdent & "-" & sSenderIdent & "-" & sYear & "-" & sSeqNum & ".xml"
+End Function
+
+'*******************************************************
+' GetElementDDNCode
+'*******************************************************
+Function GetElementDDNCode(sMICode, sReceiverIdent, sSenderIdent, sSeqNum, sYear)
+	GetElementDDNCode = cIndentEIGHT & "<ddnCode modelIdentCode=""" & sMICode & """ receiverIdent=""" & sReceiverIdent & """ senderIdent=""" & sSenderIdent & """ seqNumber=""" & sSeqNum & """ yearOfDataIssue=""" & sYear & """/>"
+End Function
+
+'*******************************************************
+' GetElementIssueDate
+'*******************************************************
+Function GetElementIssueDate(sDay, sMonth, sYearIssue)
+	GetElementIssueDate = cIndentEIGHT & "<issueDate day=""" & sDay & """ month=""" & sMonth & """ year=""" & sYearIssue & """/>"
+End Function
+
+
+'*******************************************************
+' GetSeqNumber
+'*******************************************************
+Function GetSeqNumber
+	Dim ret
+	Do Until Len(ret)=5 AND ISNUMERIC(ret)
+	ret = InputBox("Please confirm/input seqNumber for the derived DDN.(5 digit)", cAppName)
+	Loop
+
+	GetSeqNumber = ret
+End Function
+
+'*******************************************************
+' GetYearOfDataIssue
+'*******************************************************
+Function GetYearOfDataIssue
+	GetYearOfDataIssue = Year(Now)
+End Function
+
+'*******************************************************
+' GetReceiverIdent
+'*******************************************************
+Function GetReceiverIdent
+	Dim ret
+	Do Until Len(ret)=5
+	ret = InputBox("Please confirm/input receiverIdent for the derived DDN.", cAppName, cDEFAULTReceiverIdent)
+	Loop
+
+	If ret<>cDEFAULTReceiverIdent then
+		Msgbox "receiverIdent of the derived DDN has been set to """ & ret & " ""."
+	End if
+	GetReceiverIdent = ret
+End Function
+
+'*******************************************************
+' GetSenderIdent
+'*******************************************************
+Function GetSenderIdent
+	Dim ret
+
+	Do Until Len(ret)=5
+	ret = InputBox("Please confirm/input senderIdent for the derived DDN.", cAppName, cDEFAULTSenderIdent)
+	Loop
+
+	If ret<>cDEFAULTSenderIdent then
+		Msgbox "senderIdent of the derived DDN has been set to """ & ret & " ""."
+	End if
+	GetSenderIdent = ret
+End Function
+
+'*******************************************************
+' GetModelIdentCode
+'*******************************************************
+Function GetModelIdentCode
+	Dim ret
+	ret = InputBox("Please confirm/input ModelIdentCode for the derived DDN.", cAppName, cDEFAULTMICode)
+
+	If ret<>cDEFAULTMICode then
+		Msgbox "ModelIdentCode of the derived DDN has been set to """ & ret & " ""."
+	End if
+	GetModelIdentCode = ret
+End Function
+
+'*******************************************************
+' GetEnterpriseName
+'*******************************************************
+Function GetEnterpriseName(sCage)
+	Select Case sCage
+	Case cDEFAULTReceiverIdent
+		GetEnterpriseName = cDEFAULTReceiverEnterpriseName
+		Exit Function
+	Case cDEFAULTSenderIdent
+		GetEnterpriseName = cDEFAULTSenderEnterpriseName
+		Exit Function
+	Case Else
+		GetEnterpriseName =""
+	End Select
+End Function
+
+'*******************************************************
+' GetCity
+'*******************************************************
+Function GetCity(sCage)
+	Select Case sCage
+	Case cDEFAULTReceiverIdent
+		GetCity = cDEFAULTReceiverCity
+		Exit Function
+	Case cDEFAULTSenderIdent
+		GetCity = cDEFAULTSenderCity
+		Exit Function
+	Case Else
+		GetCity =""
+	End Select
+End Function
+
+'*******************************************************
+' GetCountry
+'*******************************************************
+Function GetCountry(sCage)
+	Select Case sCage
+	Case cDEFAULTReceiverIdent
+		GetCountry = cDEFAULTReceiverCountry
+		Exit Function
+	Case cDEFAULTSenderIdent
+		GetCountry = cDEFAULTSenderCountry
+		Exit Function
+	Case Else
+		GetCountry =""
+	End Select
+End Function
+
+
+
+
+'*******************************************************
+' GetUniformResourceName (URN:Uniform Resource Name)
+'*******************************************************
+Function GetUniformResourceName(sFileName)
+	'�g���q��xml,cgm,jpg
+	Dim ext
+	ext = Right(sFileName ,3)
+	ext = UCase(ext)
+	Select Case ext
+	Case "XML","CGM","JPG"
+		GetUniformResourceName = Left(sFileName,3)
+		Exit Function
+	Case Else
+		'Other
+		GetUniformResourceName = "OTH"
+	End Select
+End Function
+
+
+'*******************************************************
+' Main
+'*******************************************************
+Sub Main()
+ Dim str
+
+ n = WScript.Arguments.count
+ If n = 0 Then
+  str = GetSelectedFolderPath
+  If str <> "" Then
+   'INITIATE DDN GENERATION
+   GenerateDDNXMLFile str
+  Else
+   msgBox cUsage01 & VbCrLf & VbCrLf & cUsage02 & VbCrlf & cUsage03 & VbCrlf & cUsage04,vbInformation,cAppName
+  End If
+  WScript.Quit
+ end if
+
+ For i = 0 To n - 1
+  str = WScript.Arguments(i)
+  If GetExtension(str)="" Then
+
+  End If
+   'INITIATE DDN GENERATION
+   GenerateDDNXMLFile str
+ Next
+End Sub
+
+
+'*******************************************************
+' Common Function
+'*******************************************************
+Function GetExtension(strFPath)
+Dim fso
+Set fso = CreateObject("Scripting.FileSystemObject")
+GetExtension = fso.GetExtensionName(strFPath)
+End Function
+
+
+Function GetSelectedFolderPath()
+  Dim ff
+  Set ff = CreateObject("shell.application").browseforfolder(0, "TO GENERATE DATA DISPATCH NOTE FOR MITAC," & VbCrLf & "SELECT THE FOLDER WHERE DATA MODULES ARE SAVED." & VbCrLf & cUsage02, 1)
+  If Not ff Is Nothing Then
+	If ff = "Desktop" Then
+		GetSelectedFolderPath = "C:\Documents and Settings\All Users\Desktop"
+		Exit Function	  
+	End If	
+	If ff.items.item Is Nothing Then
+		Exit Function	  
+	End If	
+	GetSelectedFolderPath = ff.items.Item.Path
+  End If
+End Function
+
+
+'*******************************************************
+' UTF8FileReader
+'*******************************************************
+Class UTF8FileReader
+  Private name, errNo, errDesc
+  
+  Private Sub Class_Initialize
+    name = "UTF8FileReader"
+  End Sub
+  
+  Public Function ReadAll(fileName)
+    On Error Resume Next
+    Dim medthodName : medthodName = name & "." & "ReadAll"
+    
+    With CreateObject("ADODB.Stream")
+'      .Charset = "ANSI"
+      .Charset = "UTF-8"
+      .Open
+      .LoadFromFile(fileName)
+      ReadAll = .ReadText
+      .Close
+    End With
+    If Err.Number <> 0 Then
+      errNo = Err.Number
+      errDesc = Err.Description
+      On Error GoTo 0
+      Call Err.Raise(errNo, medthodName, errDesc)
+    End If
+    
+  End Function
+  
+  Public Function ReadByLine(fileName)
+    On Error Resume Next
+    Dim medthodName : medthodName = name & "." & "ReadByLine"
+    Dim arrRet()
+    ReDim Preserve arrRet(0)
+    
+    With CreateObject("ADODB.Stream")
+'     .Charset = "ANSI"
+      .Charset = "UTF-8"
+      .Open
+      .LoadFromFile(fileName)
+      Do While Not .EOS
+        arrRet(UBound(arrRet)) = .ReadText(-2)
+        ReDim Preserve arrRet(UBound(arrRet) + 1)
+      Loop
+      .Close
+    End With
+    If Err.Number <> 0 Then
+      errNo = Err.Number
+      errDesc = Err.Description
+      On Error GoTo 0
+      Call Err.Raise(errNo, medthodName, errDesc)
+    End If
+    ReadByLine = arrRet
+    
+  End Function
+  
+End Class
+
+'*******************************************************
+' UTF8FileWriter
+'*******************************************************
+Class UTF8FileWriter
+  Private name, errNo, errDesc
+  
+  Private Sub Class_Initialize
+    name = "UTF8FileWriter"
+  End Sub
+  
+  Public Sub WriteAll(text, fileName)
+    On Error Resume Next
+    Dim medthodName : medthodName = name & "." & "WriteAll"
+    
+    With CreateObject("ADODB.Stream")
+      .Type = 2
+      .charset = "UTF-8"
+      .Open
+      .writeText text
+      .saveToFile fileName, 2
+      .Close
+    End With
+    If Err.Number <> 0 Then
+      errNo = Err.Number
+      errDesc = Err.Description
+      On Error GoTo 0
+      Call Err.Raise(errNo, medthodName, errDesc)
+    End If
+    
+  End Sub
+  
+  Public Sub WriteByLine(arrText, fileName)
+    On Error Resume Next
+    Dim medthodName : medthodName = name & "." & "WriteByLine"
+    
+    With CreateObject("ADODB.Stream")
+      .Type = 2
+      .charset = "UTF-8"
+      .Open
+      Dim tmp
+      For Each tmp In arrText
+        .writeText tmp, 1
+      Next
+      .saveToFile fileName, 2
+      .Close
+    End With
+    If Err.Number <> 0 Then
+      errNo = Err.Number
+      errDesc = Err.Description
+      On Error GoTo 0
+      Call Err.Raise(errNo, medthodName, errDesc)
+    End If
+    
+  End Sub
+  
+End Class
+
